@@ -101,9 +101,12 @@ class MainActivity : AppCompatActivity() {
         root.addView(filters)
         root.addView(label("المباريات", 19f, white, true).apply { setPadding(0, 14, 0, 8) })
         when {
-            loading -> root.addView(label("جاري تحميل المباريات من المصدر...", 14f, mint))
-            errorMessage != null -> root.addView(label(errorMessage!!, 14f, muted))
+            loading && matches.isEmpty() -> root.addView(label("جاري تحميل المباريات من المصدر...", 14f, mint))
             else -> {
+                if (errorMessage != null) {
+                    root.addView(label("تعذر التحديث: " + errorMessage + " - نعرض آخر بيانات تم تحميلها إن وجدت.", 13f, 0xFFFFC27A.toInt()))
+                    root.addView(actionButton("إعادة المحاولة") { refreshMatches() })
+                }
                 val shown = matches.filter { match ->
                     val stateOk = when (filter) {
                         "الكل" -> true
@@ -115,7 +118,7 @@ class MainActivity : AppCompatActivity() {
                     stateOk && (q.isEmpty() || match.home.contains(q, true) ||
                         match.away.contains(q, true) || match.competition.contains(q, true))
                 }
-                if (shown.isEmpty()) root.addView(label("ماكو مباريات تطابق الاختيار.", 14f, muted))
+                if (shown.isEmpty()) root.addView(label(if (errorMessage != null && matches.isEmpty()) "ما متوفرة بيانات حالياً. تحقق من الإنترنت ومفتاح API." else "ماكو مباريات تطابق الاختيار.", 14f, muted))
                 shown.forEach { match ->
                     val card = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL; setPadding(14, 12, 14, 12)
