@@ -26,6 +26,7 @@ class MainActivity : AppCompatActivity() {
     private var matches: List<Match> = emptyList()
     private var loading = false
     private var errorMessage: String? = null
+    private var lastUpdated: String? = null
     private var player: ExoPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,6 +62,7 @@ class MainActivity : AppCompatActivity() {
                 loading = false
                 result.onSuccess {
                     matches = it
+                    lastUpdated = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale("ar", "IQ")).format(java.util.Date())
                     errorMessage = if (it.isEmpty()) "ماكو مباريات ضمن الفترة الحالية أو ضمن البطولات المتاحة بحسابك." else null
                 }.onFailure { errorMessage = it.message ?: "تعذر جلب المباريات." }
                 showHome()
@@ -91,7 +93,7 @@ class MainActivity : AppCompatActivity() {
         searchRow.addView(actionButton("بحث") { showHome(filter, search.text.toString()) })
         root.addView(searchRow)
         val filters = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        listOf("الكل", "مباشرة", "قادمة", "منتهية", "المفضلة").forEach { f ->
+        listOf("الكل", "مباشرة", "قادمة", "منتهية", "مؤجلة", "المفضلة").forEach { f ->
             filters.addView(MaterialButton(this).apply {
                 text = f; textSize = 9f; setOnClickListener { showHome(f, search.text.toString()) }
             }, LinearLayout.LayoutParams(0, -2, 1f))
@@ -106,6 +108,7 @@ class MainActivity : AppCompatActivity() {
                     val stateOk = when (filter) {
                         "الكل" -> true
                         "المفضلة" -> favorites.contains(match.id)
+                        "مؤجلة" -> match.state == "مؤجلة/ملغاة"
                         else -> match.state == filter
                     }
                     val q = query.trim()
@@ -135,6 +138,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        root.addView(label("آخر تحديث: ${lastUpdated ?: "لم يتم التحديث بعد"}", 11f, muted))
         root.addView(label("المصدر: football-data.org • التوقيت بتوقيت بغداد • البطولات حسب الخطة.", 11f, muted))
         setContentView(ScrollView(this).apply { addView(root) })
     }
