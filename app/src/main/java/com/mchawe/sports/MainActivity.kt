@@ -146,11 +146,7 @@ class MainActivity : AppCompatActivity() {
             val detailsButton = MaterialButton(this).apply {
                 text = "التفاصيل"
                 textSize = 10f
-                setOnClickListener {
-                    Toast.makeText(this@MainActivity,
-                        "سيتم ربط تفاصيل وبيانات المباراة الحقيقية لاحقاً",
-                        Toast.LENGTH_LONG).show()
-                }
+                setOnClickListener { showMatchDetails(match, filter, search.text.toString()) }
             }
             actions.addView(favoriteButton, LinearLayout.LayoutParams(0, -2, 1f))
             actions.addView(detailsButton, LinearLayout.LayoutParams(0, -2, 1f))
@@ -160,6 +156,49 @@ class MainActivity : AppCompatActivity() {
         content.addView(list)
         content.addView(label("تنبيه: هذه مباريات تجريبية وليست جدولاً مباشراً.", 12f, muted))
         val scroll = ScrollView(this).apply { addView(content) }
+        setContentView(scroll)
+    }
+
+    private fun showMatchDetails(match: Match, previousFilter: String, previousQuery: String) {
+        val root = baseLayout()
+        val back = MaterialButton(this).apply {
+            text = "رجوع للمباريات"
+            setOnClickListener { showHome(previousFilter, previousQuery) }
+        }
+        root.addView(back)
+        root.addView(label("تفاصيل المباراة", 23f, mint, true),
+            LinearLayout.LayoutParams(-1, -2).apply { topMargin = 20; bottomMargin = 18 })
+
+        val scorePanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(18, 24, 18, 24)
+            setBackgroundColor(panel)
+        }
+        scorePanel.addView(label(match.home, 21f, white, true).apply { gravity = Gravity.CENTER })
+        scorePanel.addView(label("VS", 16f, mint, true).apply { gravity = Gravity.CENTER })
+        scorePanel.addView(label(match.away, 21f, white, true).apply { gravity = Gravity.CENTER })
+        scorePanel.addView(label(match.state + "  •  " + match.time, 14f, muted).apply {
+            gravity = Gravity.CENTER
+        })
+        root.addView(scorePanel, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 18 })
+
+        root.addView(label("معلومات المباراة", 18f, white, true))
+        root.addView(label("البطولة: غير محددة", 14f, muted).apply {
+            setPadding(0, 10, 0, 6)
+        })
+        root.addView(label("الملعب: غير متوفر", 14f, muted).apply {
+            setPadding(0, 6, 0, 6)
+        })
+        root.addView(label("القناة الناقلة: غير متوفرة", 14f, muted).apply {
+            setPadding(0, 6, 0, 14)
+        })
+        val note = label(
+            "ملاحظة: تفاصيل هذه المباراة تجريبية. ستظهر البطولة والملعب والنتيجة والقناة عند ربط مصدر بيانات موثوق.",
+            13f, muted
+        )
+        root.addView(note)
+        val scroll = ScrollView(this).apply { addView(root) }
         setContentView(scroll)
     }
 
