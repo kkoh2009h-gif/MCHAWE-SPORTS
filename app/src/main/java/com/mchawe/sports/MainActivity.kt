@@ -76,7 +76,7 @@ class MainActivity : AppCompatActivity() {
         root.addView(label("MCHAWE SPORTS", 25f, mint, true))
         root.addView(label("مواعيد ونتائج كرة القدم من مصدر بيانات حقيقي", 13f, muted))
         val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        top.addView(actionButton("تحديث") { refreshMatches() }, LinearLayout.LayoutParams(0, -2, 1f))
+        top.addView(actionButton(if (loading) "جارٍ التحديث…" else "تحديث") { if (!loading) refreshMatches() }.apply { isEnabled = !loading }, LinearLayout.LayoutParams(0, -2, 1f))
         top.addView(actionButton("الإعدادات") { showSettings() }, LinearLayout.LayoutParams(0, -2, 1f))
         root.addView(top)
         val liveCount = matches.count { it.state == "مباشرة" }
