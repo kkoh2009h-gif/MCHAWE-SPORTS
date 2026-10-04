@@ -32,6 +32,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         favorites.addAll(prefs.getStringSet("favorites", emptySet()) ?: emptySet())
+        matches = readCachedMatches()
+        lastUpdated = prefs.getString("last_updated", null)
         showHome()
         if (prefs.getString("football_token", null).isNullOrBlank()) showTokenDialog() else refreshMatches()
     }
@@ -53,6 +55,29 @@ class MainActivity : AppCompatActivity() {
     private fun actionButton(textValue: String, action: () -> Unit) =
         MaterialButton(this).apply { text = textValue; setOnClickListener { action() } }
 
+    private fun encodeMatches(items: List<Match>): String {
+        val array = org.json.JSONArray()
+        items.forEach { match ->
+            array.put(org.json.JSONObject().apply {
+                put("id", match.id); put("home", match.home); put("away", match.away)
+                put("time", match.time); put("state", match.state); put("score", match.score)
+                put("competition", match.competition); put("venue", match.venue)
+            })
+        }
+        return array.toString()
+    }
+
+    private fun readCachedMatches(): List<Match> {
+        return try {
+            val array = org.json.JSONArray(prefs.getString("cached_matches", "[]"))
+            (0 until array.length()).map { index ->
+                val item = array.getJSONObject(index)
+                Match(item.optString("id"), item.optString("home"), item.optString("away"),
+                    item.optString("time"), item.optString("state"), item.optString("score"),
+                    item.optString("competition"), item.optString("venue"))
+            }
+        } catch (_: Exception) { emptyList() }
+    }
     private fun refreshMatches() {
         val token = prefs.getString("football_token", null).orEmpty()
         if (token.isBlank()) { showTokenDialog(); return }
@@ -63,6 +88,10 @@ class MainActivity : AppCompatActivity() {
                 result.onSuccess {
                     matches = it
                     lastUpdated = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale("ar", "IQ")).format(java.util.Date())
+                    prefs.edit {
+                        putString("cached_matches", encodeMatches(it))
+                        putString("last_updated", lastUpdated)
+                    }
                     errorMessage = if (it.isEmpty()) "ماكو مباريات ضمن الفترة الحالية أو ضمن البطولات المتاحة بحسابك." else null
                 }.onFailure { errorMessage = it.message ?: "تعذر جلب المباريات." }
                 showHome()
@@ -95,10 +124,14 @@ class MainActivity : AppCompatActivity() {
         val filters = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         listOf("الكل", "مباشرة", "قادمة", "منتهية", "مؤجلة", "المفضلة").forEach { f ->
             filters.addView(MaterialButton(this).apply {
-                text = f; textSize = 9f; setOnClickListener { showHome(f, search.text.toString()) }
-            }, LinearLayout.LayoutParams(0, -2, 1f))
+                text = f; textSize = 10f; minWidth = 0
+                setOnClickListener { showHome(f, search.text.toString()) }
+            }, LinearLayout.LayoutParams(-2, -2).apply { marginEnd = 6 })
         }
-        root.addView(filters)
+        root.addView(ScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(filters)
+        }, LinearLayout.LayoutParams(-1, -2))
         root.addView(label("المباريات", 19f, white, true).apply { setPadding(0, 14, 0, 8) })
         when {
             loading && matches.isEmpty() -> root.addView(label("جاري تحميل المباريات من المصدر...", 14f, mint))
