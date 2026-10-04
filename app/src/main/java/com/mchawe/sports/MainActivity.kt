@@ -3,16 +3,21 @@ package com.mchawe.sports
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.google.android.material.button.MaterialButton
 
-data class Match(val home: String, val away: String, val time: String, val state: String)
+data class Match(val home: String, val away: String, val time: String, val state: String) {
+    val id: String get() = "$home-$away"
+}
 
 class MainActivity : AppCompatActivity() {
     private val navy = 0xFF071426.toInt()
@@ -26,11 +31,14 @@ class MainActivity : AppCompatActivity() {
         Match("باريس سان جيرمان", "بايرن ميونخ", "غداً 22:00", "قادمة"),
         Match("ميلان", "إنتر ميلان", "انتهت", "منتهية")
     )
+    private val favorites = mutableSetOf<String>()
     private var player: ExoPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        showHome("الكل")
+        favorites.addAll(getSharedPreferences("mchawe", MODE_PRIVATE)
+            .getStringSet("favorites", emptySet()) ?: emptySet())
+        showHome()
     }
 
     private fun baseLayout() = LinearLayout(this).apply {
@@ -49,54 +57,107 @@ class MainActivity : AppCompatActivity() {
             gravity = Gravity.RIGHT
         }
 
-    private fun showHome(filter: String) {
+    private fun showHome(filter: String = "الكل", query: String = "") {
         player?.release()
         player = null
-        val root = baseLayout()
-        root.addView(label("MCHAWE SPORTS", 24f, mint, true))
-        root.addView(label("تابع المباريات لحظة بلحظة", 14f, muted))
+        val content = baseLayout()
+        content.addView(label("MCHAWE SPORTS", 25f, mint, true))
+        content.addView(label("عالم المباريات بين يديك", 14f, muted))
         val liveCount = matches.count { it.state == "مباشرة" }
         val hero = TextView(this).apply {
-            text = "⚽  مركز المباريات\n\n" + liveCount + " مباراة مباشرة الآن\n\nتغطية رياضية بواجهة عربية"
+            text = "⚽  مركز المباريات\n\n$liveCount مباراة مباشرة الآن\n\nتابع جدول المباريات ونتائجها"
             textSize = 18f
             setTextColor(white)
             gravity = Gravity.RIGHT
             setPadding(18, 18, 18, 18)
             setBackgroundColor(panel)
         }
-        root.addView(hero, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 22; bottomMargin = 18 })
+        content.addView(hero, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 20; bottomMargin = 14 })
+
+        val search = EditText(this).apply {
+            hint = "ابحث عن فريق..."
+            textSize = 15f
+            setSingleLine(true)
+            setTextColor(white)
+            setHintTextColor(muted)
+            setPadding(14, 10, 14, 10)
+            setBackgroundColor(panel)
+            setText(query)
+        }
+        content.addView(search, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 12 })
         val filters = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-        listOf("الكل", "مباشرة", "قادمة", "منتهية").forEach { name ->
+        listOf("الكل", "مباشرة", "قادمة", "منتهية", "المفضلة").forEach { name ->
             val button = MaterialButton(this).apply {
                 text = name
-                textSize = 11f
-                setOnClickListener { showHome(name) }
+                textSize = 10f
+                setOnClickListener { showHome(name, search.text.toString()) }
             }
             filters.addView(button, LinearLayout.LayoutParams(0, -2, 1f))
         }
-        root.addView(filters)
-        root.addView(label("مباريات اليوم", 20f, white, true),
-            LinearLayout.LayoutParams(-1, -2).apply { topMargin = 20; bottomMargin = 10 })
-        val shown = if (filter == "الكل") matches else matches.filter { it.state == filter }
+        content.addView(filters)
+        content.addView(label("المباريات", 20f, white, true),
+            LinearLayout.LayoutParams(-1, -2).apply { topMargin = 18; bottomMargin = 10 })
+
+        val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val normalizedQuery = query.trim()
+        val shown = matches.filter { match ->
+            val stateOk = when (filter) {
+                "الكل" -> true
+                "المفضلة" -> favorites.contains(match.id)
+                else -> match.state == filter
+            }
+            val queryOk = normalizedQuery.isEmpty() ||
+                match.home.contains(normalizedQuery, true) ||
+                match.away.contains(normalizedQuery, true)
+            stateOk && queryOk
+        }
+        if (shown.isEmpty()) list.addView(label("ماكو مباريات تطابق البحث حالياً.", 14f, muted))
         shown.forEach { match ->
-            val card = TextView(this).apply {
-                text = match.home + "   ×   " + match.away + "\n" +
-                    match.state + "  •  " + match.time + "\nاضغط لعرض التفاصيل"
-                textSize = 16f
-                setTextColor(white)
-                setPadding(16, 16, 16, 16)
-                gravity = Gravity.RIGHT
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(16, 14, 16, 14)
                 setBackgroundColor(panel)
+            }
+            card.addView(label(match.home + "   ×   " + match.away, 17f, white, true))
+            card.addView(label(match.state + "  •  " + match.time, 13f,
+                if (match.state == "مباشرة") mint else muted))
+            val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            val favoriteButton = MaterialButton(this).apply {
+                text = if (favorites.contains(match.id)) "★ محفوظة" else "☆ أضف للمفضلة"
+                textSize = 10f
+                setOnClickListener {
+                    if (favorites.contains(match.id)) favorites.remove(match.id) else favorites.add(match.id)
+                    getSharedPreferences("mchawe", MODE_PRIVATE).edit {
+                        putStringSet("favorites", favorites.toSet())
+                    }
+                    showHome(filter, search.text.toString())
+                }
+            }
+            val detailsButton = MaterialButton(this).apply {
+                text = "التفاصيل"
+                textSize = 10f
                 setOnClickListener {
                     Toast.makeText(this@MainActivity,
-                        "بيانات المباراة والبث المرخّص ستُربط في مرحلة لاحقة",
+                        "سيتم ربط تفاصيل وبيانات المباراة الحقيقية لاحقاً",
                         Toast.LENGTH_LONG).show()
                 }
             }
-            root.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 12 })
+            actions.addView(favoriteButton, LinearLayout.LayoutParams(0, -2, 1f))
+            actions.addView(detailsButton, LinearLayout.LayoutParams(0, -2, 1f))
+            card.addView(actions)
+            list.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 12 })
         }
-        root.addView(label("ملاحظة: المباريات المعروضة حالياً بيانات تجريبية.", 12f, muted))
-        setContentView(root)
+        content.addView(list)
+        content.addView(label("تنبيه: هذه مباريات تجريبية وليست جدولاً مباشراً.", 12f, muted))
+        search.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (s.toString() != query) showHome(filter, s.toString())
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+        val scroll = ScrollView(this).apply { addView(content) }
+        setContentView(scroll)
     }
 
     private fun showPlayer(streamUrl: String) {
