@@ -178,12 +178,26 @@ class MainActivity : AppCompatActivity() {
         root.addView(label("MCHAWE SPORTS", 18f, mint, true).apply {
             setPadding(0, 22, 0, 8)
         })
-        root.addView(label("الإصدار الأولي • تطبيق لمتابعة المباريات", 14f, muted))
+        val versionName = try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "غير معروف"
+        } catch (_: Exception) { "غير معروف" }
+        root.addView(label("إصدار التطبيق: $versionName", 14f, muted))
         root.addView(label(
             "يعرض التطبيق حالياً بيانات تجريبية. ستتوفر المواعيد والنتائج والبث عند ربط مصادر موثوقة ومرخّصة.",
             13f, muted
         ).apply { setPadding(0, 10, 0, 18) })
 
+        root.addView(MaterialButton(this).apply {
+            text = "مشاركة التطبيق"
+            setOnClickListener {
+                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(android.content.Intent.EXTRA_TEXT,
+                        "جرّب تطبيق MCHAWE SPORTS لمتابعة المباريات: https://github.com/kkoh2009h-gif/MCHAWE-SPORTS")
+                }
+                startActivity(android.content.Intent.createChooser(shareIntent, "مشاركة التطبيق"))
+            }
+        })
         root.addView(MaterialButton(this).apply {
             text = "مسح جميع المفضلة"
             setOnClickListener {
