@@ -84,7 +84,17 @@ class MainActivity : AppCompatActivity() {
             setBackgroundColor(panel)
             setText(query)
         }
-        content.addView(search, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 12 })
+        val searchRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val searchButton = MaterialButton(this).apply {
+            text = "بحث"
+            setOnClickListener { showHome(filter, search.text.toString()) }
+        }
+        searchRow.addView(search, LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = 8 })
+        searchRow.addView(searchButton, LinearLayout.LayoutParams(-2, -2))
+        content.addView(searchRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 12 })
         val filters = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         listOf("الكل", "مباشرة", "قادمة", "منتهية", "المفضلة").forEach { name ->
             val button = MaterialButton(this).apply {
@@ -149,13 +159,6 @@ class MainActivity : AppCompatActivity() {
         }
         content.addView(list)
         content.addView(label("تنبيه: هذه مباريات تجريبية وليست جدولاً مباشراً.", 12f, muted))
-        val searchButton = MaterialButton(this).apply {
-            text = "بحث"
-            setOnClickListener {
-                showHome(filter, search.text.toString())
-            }
-        }
-        content.addView(searchButton)
         val scroll = ScrollView(this).apply { addView(content) }
         setContentView(scroll)
     }
