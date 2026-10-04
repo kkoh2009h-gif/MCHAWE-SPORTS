@@ -63,6 +63,11 @@ class MainActivity : AppCompatActivity() {
         val content = baseLayout()
         content.addView(label("MCHAWE SPORTS", 25f, mint, true))
         content.addView(label("عالم المباريات بين يديك", 14f, muted))
+        val settingsButton = MaterialButton(this).apply {
+            text = "الإعدادات"
+            setOnClickListener { showSettings() }
+        }
+        content.addView(settingsButton, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 10 })
         val liveCount = matches.count { it.state == "مباشرة" }
         val hero = TextView(this).apply {
             text = "⚽  مركز المباريات\n\n$liveCount مباراة مباشرة الآن\n\nتابع جدول المباريات ونتائجها"
@@ -157,6 +162,47 @@ class MainActivity : AppCompatActivity() {
         content.addView(label("تنبيه: هذه مباريات تجريبية وليست جدولاً مباشراً.", 12f, muted))
         val scroll = ScrollView(this).apply { addView(content) }
         setContentView(scroll)
+    }
+
+    private fun showSettings() {
+        val root = baseLayout()
+        root.addView(MaterialButton(this).apply {
+            text = "رجوع"
+            setOnClickListener { showHome() }
+        })
+        root.addView(label("الإعدادات", 25f, mint, true),
+            LinearLayout.LayoutParams(-1, -2).apply { topMargin = 22; bottomMargin = 16 })
+
+        val savedCount = favorites.size
+        root.addView(label("المباريات المحفوظة: $savedCount", 16f, white, true))
+        root.addView(label("MCHAWE SPORTS", 18f, mint, true).apply {
+            setPadding(0, 22, 0, 8)
+        })
+        root.addView(label("الإصدار الأولي • تطبيق لمتابعة المباريات", 14f, muted))
+        root.addView(label(
+            "يعرض التطبيق حالياً بيانات تجريبية. ستتوفر المواعيد والنتائج والبث عند ربط مصادر موثوقة ومرخّصة.",
+            13f, muted
+        ).apply { setPadding(0, 10, 0, 18) })
+
+        root.addView(MaterialButton(this).apply {
+            text = "مسح جميع المفضلة"
+            setOnClickListener {
+                android.app.AlertDialog.Builder(this@MainActivity)
+                    .setTitle("مسح المفضلة")
+                    .setMessage("متأكد تريد حذف كل المباريات المحفوظة؟")
+                    .setNegativeButton("إلغاء", null)
+                    .setPositiveButton("مسح") { _, _ ->
+                        favorites.clear()
+                        getSharedPreferences("mchawe", MODE_PRIVATE).edit {
+                            putStringSet("favorites", emptySet())
+                        }
+                        Toast.makeText(this@MainActivity, "تم مسح المفضلة", Toast.LENGTH_SHORT).show()
+                        showSettings()
+                    }
+                    .show()
+            }
+        })
+        setContentView(ScrollView(this).apply { addView(root) })
     }
 
     private fun showMatchDetails(match: Match, previousFilter: String, previousQuery: String) {
