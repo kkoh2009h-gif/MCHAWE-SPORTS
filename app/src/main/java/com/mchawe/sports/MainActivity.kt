@@ -149,13 +149,13 @@ class MainActivity : AppCompatActivity() {
         }
         content.addView(list)
         content.addView(label("تنبيه: هذه مباريات تجريبية وليست جدولاً مباشراً.", 12f, muted))
-        search.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                if (s.toString() != query) showHome(filter, s.toString())
+        val searchButton = MaterialButton(this).apply {
+            text = "بحث"
+            setOnClickListener {
+                showHome(filter, search.text.toString())
             }
-            override fun afterTextChanged(s: android.text.Editable?) {}
-        })
+        }
+        content.addView(searchButton)
         val scroll = ScrollView(this).apply { addView(content) }
         setContentView(scroll)
     }
