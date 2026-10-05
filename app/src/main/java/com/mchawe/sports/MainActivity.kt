@@ -296,6 +296,19 @@ class MainActivity : AppCompatActivity() {
             prefs.edit { putStringSet("favorites", favorites.toSet()) }
             showMatchDetails(match, filter, query)
         })
+        root.addView(actionButton("مشاركة المباراة") {
+            val text = "⚽ ${match.home} × ${match.away}\n" +
+                "🏆 ${match.competition}\n" +
+                "📅 ${match.time}\n" +
+                "📊 ${match.score}\n" +
+                "🔴 الحالة: ${match.state}\n" +
+                "📍 ${match.venue}"
+            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_TEXT, text)
+            }
+            startActivity(android.content.Intent.createChooser(intent, "مشاركة المباراة"))
+        })
         setContentView(ScrollView(this).apply { addView(root) })
     }
 
