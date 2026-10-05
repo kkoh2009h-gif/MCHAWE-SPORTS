@@ -11,7 +11,7 @@ import java.util.concurrent.Executors
 
 data class Match(
     val id: String, val home: String, val away: String, val time: String,
-    val state: String, val score: String, val competition: String, val venue: String
+    val state: String, val score: String, val competition: String, val venue: String, val sortKey: Long = 0L
 )
 
 object FootballDataClient {
@@ -61,9 +61,9 @@ object FootballDataClient {
                             "POSTPONED", "SUSPENDED", "CANCELLED" -> "مؤجلة/ملغاة"
                             else -> "قادمة"
                         }
-                        val kickoff = try {
-                            dateOutput.format(dateParser.parse(item.optString("utcDate"))!!)
-                        } catch (_: Exception) { item.optString("utcDate") }
+                        val parsedDate = try { dateParser.parse(item.optString("utcDate")) } catch (_: Exception) { null }
+                        val kickoff = parsedDate?.let { dateOutput.format(it) } ?: item.optString("utcDate")
+                        val sortKey = parsedDate?.time ?: Long.MAX_VALUE
                         val fullTime = item.optJSONObject("score")?.optJSONObject("fullTime")
                         val h = fullTime?.opt("home")?.toString()?.takeUnless { it == "null" } ?: "-"
                         val a = fullTime?.opt("away")?.toString()?.takeUnless { it == "null" } ?: "-"
@@ -73,7 +73,8 @@ object FootballDataClient {
                             item.optJSONObject("awayTeam")?.optString("name") ?: "الفريق الثاني",
                             kickoff, state, if (state == "قادمة") "لم تبدأ" else "$h - $a",
                             item.optJSONObject("competition")?.optString("name") ?: "غير محددة",
-                            item.optString("venue").takeUnless { it.isBlank() || it == "null" } ?: "غير متوفر"
+                            item.optString("venue").takeUnless { it.isBlank() || it == "null" } ?: "غير متوفر",
+                            sortKey
                         ))
                     }
                     matches.sortWith(compareBy<Match> {
@@ -84,7 +85,7 @@ object FootballDataClient {
                             "منتهية" -> 3
                             else -> 4
                         }
-                    }.thenBy { it.time })
+                    }.thenBy { it.sortKey }.thenBy { it.time })
                     callback(Result.success(matches))
                 } finally { connection.disconnect() }
             } catch (e: Exception) { callback(Result.failure(e)) }
