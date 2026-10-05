@@ -245,10 +245,19 @@ class MainActivity : AppCompatActivity() {
         root.addView(label("${match.home}\n\n${match.score}\n\n${match.away}", 22f, white, true).apply {
             gravity = Gravity.CENTER; setPadding(16, 24, 16, 24); setBackgroundColor(panel)
         })
-        root.addView(label("الحالة: ${match.state}", 15f, white))
+        val statusColor = if (match.state == "مباشرة") mint else white
+        root.addView(label("● ${match.state}", 16f, statusColor, true).apply {
+            setPadding(14, 14, 14, 14)
+            setBackgroundColor(panel)
+        })
         root.addView(label("الموعد: ${match.time} (توقيت بغداد)", 14f, muted))
         root.addView(label("البطولة: ${match.competition}", 14f, muted))
-        root.addView(label("الملعب: ${match.venue}", 14f, muted))
+        root.addView(label("الملعب: ${if (match.venue.isBlank()) "غير محدد" else match.venue}", 14f, muted))
+        root.addView(actionButton(if (favorites.contains(match.id)) "★ إزالة من المفضلة" else "☆ إضافة للمفضلة") {
+            if (favorites.contains(match.id)) favorites.remove(match.id) else favorites.add(match.id)
+            prefs.edit { putStringSet("favorites", favorites.toSet()) }
+            showMatchDetails(match, filter, query)
+        })
         setContentView(ScrollView(this).apply { addView(root) })
     }
 
