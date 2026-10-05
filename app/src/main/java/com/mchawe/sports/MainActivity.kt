@@ -3,6 +3,7 @@ package com.mchawe.sports
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.graphics.BitmapFactory
 import android.view.Gravity
 import android.view.View
 import android.widget.EditText
@@ -34,6 +35,7 @@ class MainActivity : AppCompatActivity() {
     private var currentFilter = "الكل"
     private var currentQuery = ""
     private val refreshHandler = Handler(Looper.getMainLooper())
+    private val imageExecutor = java.util.concurrent.Executors.newFixedThreadPool(4)
     private val autoRefreshRunnable = object : Runnable {
         override fun run() {
             if (!isFinishing && !loading && !prefs.getString("football_token", null).isNullOrBlank()) {
@@ -76,7 +78,9 @@ class MainActivity : AppCompatActivity() {
             array.put(org.json.JSONObject().apply {
                 put("id", match.id); put("home", match.home); put("away", match.away)
                 put("time", match.time); put("state", match.state); put("score", match.score)
-                put("competition", match.competition); put("venue", match.venue); put("sortKey", match.sortKey)
+                put("competition", match.competition); put("venue", match.venue)
+                put("crestHome", match.crestHome); put("crestAway", match.crestAway)
+                put("sortKey", match.sortKey)
             })
         }
         return array.toString()
@@ -89,7 +93,9 @@ class MainActivity : AppCompatActivity() {
                 val item = array.getJSONObject(index)
                 Match(item.optString("id"), item.optString("home"), item.optString("away"),
                     item.optString("time"), item.optString("state"), item.optString("score"),
-                    item.optString("competition"), item.optString("venue"), item.optLong("sortKey", 0L))
+                    item.optString("competition"), item.optString("venue"),
+                    item.optString("crestHome"), item.optString("crestAway"),
+                    item.optLong("sortKey", 0L))
             }
         } catch (_: Exception) { emptyList() }
     }
@@ -192,13 +198,52 @@ class MainActivity : AppCompatActivity() {
                         true
                     ))
                     card.addView(header)
-                    card.addView(label("${match.home}   ×   ${match.away}", 17f, white, true).apply {
+                    val teams = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER
-                        setPadding(4, 12, 4, 8)
+                        setPadding(4, 12, 4, 6)
+                    }
+                    fun crest(url: String): android.widget.ImageView = android.widget.ImageView(this).apply {
+                        layoutParams = LinearLayout.LayoutParams(52, 52).apply {
+                            marginStart = 8; marginEnd = 8
+                        }
+                        scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+                        setImageResource(android.R.drawable.ic_menu_gallery)
+                        loadCrest(this, url)
+                    }
+                    val homeBox = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.CENTER
+                    }
+                    homeBox.addView(crest(match.crestHome))
+                    homeBox.addView(label(match.home, 12f, white, true).apply {
+                        gravity = Gravity.CENTER
+                        maxLines = 2
+                    }, LinearLayout.LayoutParams(105, -2))
+                    val center = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.CENTER
+                    }
+                    center.addView(label("×", 20f, muted, true).apply { gravity = Gravity.CENTER })
+                    center.addView(label(match.score, 12f, if (match.state == "مباشرة") mint else muted, true).apply {
+                        gravity = Gravity.CENTER
                     })
-                    card.addView(label("${match.time}  •  ${match.score}", 13f,
-                        if (match.state == "مباشرة") mint else muted).apply {
+                    val awayBox = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
                         gravity = Gravity.CENTER
+                    }
+                    awayBox.addView(crest(match.crestAway))
+                    awayBox.addView(label(match.away, 12f, white, true).apply {
+                        gravity = Gravity.CENTER
+                        maxLines = 2
+                    }, LinearLayout.LayoutParams(105, -2))
+                    teams.addView(homeBox, LinearLayout.LayoutParams(0, -2, 1f))
+                    teams.addView(center, LinearLayout.LayoutParams(54, -2))
+                    teams.addView(awayBox, LinearLayout.LayoutParams(0, -2, 1f))
+                    card.addView(teams)
+                    card.addView(label(match.time, 12f, if (match.state == "مباشرة") mint else muted).apply {
+                        gravity = Gravity.CENTER
+                        setPadding(4, 2, 4, 8)
                     })
                     val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
                     buttons.addView(actionButton(if (favorites.contains(match.id)) "★ محفوظة" else "☆ المفضلة") {
@@ -217,6 +262,21 @@ class MainActivity : AppCompatActivity() {
         root.addView(label("التحديث التلقائي: كل 5 دقائق أثناء فتح التطبيق.", 11f, muted))
         root.addView(label("المصدر: football-data.org • التوقيت بتوقيت بغداد • البطولات حسب الخطة.", 11f, muted))
         setContentView(ScrollView(this).apply { addView(root) })
+    }
+
+    private fun loadCrest(view: android.widget.ImageView, url: String) {
+        if (url.isBlank()) return
+        view.tag = url
+        imageExecutor.execute {
+            try {
+                val bitmap = java.net.URL(url).openStream().use { BitmapFactory.decodeStream(it) }
+                if (bitmap != null) {
+                    runOnUiThread {
+                        if (view.tag == url) view.setImageBitmap(bitmap)
+                    }
+                }
+            } catch (_: Exception) { }
+        }
     }
 
     private fun showTokenDialog() {
@@ -358,6 +418,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         refreshHandler.removeCallbacks(autoRefreshRunnable)
         player?.release(); player = null
+        imageExecutor.shutdownNow()
         super.onDestroy()
     }
 }
