@@ -30,6 +30,8 @@ class MainActivity : AppCompatActivity() {
     private var errorMessage: String? = null
     private var lastUpdated: String? = null
     private var player: ExoPlayer? = null
+    private var currentFilter = "الكل"
+    private var currentQuery = ""
     private val refreshHandler = Handler(Looper.getMainLooper())
     private val autoRefreshRunnable = object : Runnable {
         override fun run() {
@@ -93,7 +95,7 @@ class MainActivity : AppCompatActivity() {
     private fun refreshMatches() {
         val token = prefs.getString("football_token", null).orEmpty()
         if (token.isBlank()) { showTokenDialog(); return }
-        loading = true; errorMessage = null; showHome()
+        loading = true; errorMessage = null; showHome(currentFilter, currentQuery)
         FootballDataClient.load(token) { result ->
             runOnUiThread {
                 loading = false
@@ -106,12 +108,14 @@ class MainActivity : AppCompatActivity() {
                     }
                     errorMessage = if (it.isEmpty()) "ماكو مباريات ضمن الفترة الحالية أو ضمن البطولات المتاحة بحسابك." else null
                 }.onFailure { errorMessage = it.message ?: "تعذر جلب المباريات." }
-                showHome()
+                showHome(currentFilter, currentQuery)
             }
         }
     }
 
-    private fun showHome(filter: String = "الكل", query: String = "") {
+    private fun showHome(filter: String = currentFilter, query: String = currentQuery) {
+        currentFilter = filter
+        currentQuery = query
         player?.release(); player = null
         val root = baseLayout()
         root.addView(label("MCHAWE SPORTS", 25f, mint, true))
@@ -307,8 +311,15 @@ class MainActivity : AppCompatActivity() {
         setContentView(root)
     }
 
+    override fun onStart() {
+        super.onStart()
+        refreshHandler.removeCallbacks(autoRefreshRunnable)
+        refreshHandler.postDelayed(autoRefreshRunnable, 5 * 60 * 1000L)
+    }
+
     override fun onStop() {
         super.onStop()
+        refreshHandler.removeCallbacks(autoRefreshRunnable)
         player?.release(); player = null
     }
 
