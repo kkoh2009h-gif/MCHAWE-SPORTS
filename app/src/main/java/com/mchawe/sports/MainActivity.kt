@@ -214,6 +214,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         root.addView(label("آخر تحديث: ${lastUpdated ?: "لم يتم التحديث بعد"}", 11f, muted))
+        root.addView(label("التحديث التلقائي: كل 5 دقائق أثناء فتح التطبيق.", 11f, muted))
         root.addView(label("المصدر: football-data.org • التوقيت بتوقيت بغداد • البطولات حسب الخطة.", 11f, muted))
         setContentView(ScrollView(this).apply { addView(root) })
     }
