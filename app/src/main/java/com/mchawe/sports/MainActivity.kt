@@ -157,10 +157,32 @@ class MainActivity : AppCompatActivity() {
                         orientation = LinearLayout.VERTICAL; setPadding(14, 12, 14, 12)
                         setBackgroundColor(panel)
                     }
-                    card.addView(label(match.competition, 12f, mint, true))
-                    card.addView(label("${match.home}   ×   ${match.away}", 16f, white, true))
-                    card.addView(label("${match.state}  •  ${match.time}  •  ${match.score}", 13f,
-                        if (match.state == "مباشرة") mint else muted))
+                    val header = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                    }
+                    header.addView(label(match.competition, 12f, mint, true),
+                        LinearLayout.LayoutParams(0, -2, 1f))
+                    header.addView(label(
+                        when (match.state) {
+                            "مباشرة" -> "● مباشر"
+                            "منتهية" -> "منتهية"
+                            "قادمة" -> "قادمة"
+                            else -> match.state
+                        },
+                        11f,
+                        if (match.state == "مباشرة") mint else muted,
+                        true
+                    ))
+                    card.addView(header)
+                    card.addView(label("${match.home}   ×   ${match.away}", 17f, white, true).apply {
+                        gravity = Gravity.CENTER
+                        setPadding(4, 12, 4, 8)
+                    })
+                    card.addView(label("${match.time}  •  ${match.score}", 13f,
+                        if (match.state == "مباشرة") mint else muted).apply {
+                        gravity = Gravity.CENTER
+                    })
                     val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
                     buttons.addView(actionButton(if (favorites.contains(match.id)) "★ محفوظة" else "☆ المفضلة") {
                         if (favorites.contains(match.id)) favorites.remove(match.id) else favorites.add(match.id)
