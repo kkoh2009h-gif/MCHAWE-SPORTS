@@ -76,6 +76,15 @@ object FootballDataClient {
                             item.optString("venue").takeUnless { it.isBlank() || it == "null" } ?: "غير متوفر"
                         ))
                     }
+                    matches.sortWith(compareBy<Match> {
+                        when (it.state) {
+                            "مباشرة" -> 0
+                            "قادمة" -> 1
+                            "مؤجلة/ملغاة" -> 2
+                            "منتهية" -> 3
+                            else -> 4
+                        }
+                    }.thenBy { it.time })
                     callback(Result.success(matches))
                 } finally { connection.disconnect() }
             } catch (e: Exception) { callback(Result.failure(e)) }
