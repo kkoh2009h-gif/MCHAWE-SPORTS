@@ -1,6 +1,8 @@
 package com.mchawe.sports
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.widget.EditText
@@ -28,6 +30,15 @@ class MainActivity : AppCompatActivity() {
     private var errorMessage: String? = null
     private var lastUpdated: String? = null
     private var player: ExoPlayer? = null
+    private val refreshHandler = Handler(Looper.getMainLooper())
+    private val autoRefreshRunnable = object : Runnable {
+        override fun run() {
+            if (!isFinishing && !loading && !prefs.getString("football_token", null).isNullOrBlank()) {
+                refreshMatches()
+            }
+            refreshHandler.postDelayed(this, 5 * 60 * 1000L)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +47,7 @@ class MainActivity : AppCompatActivity() {
         lastUpdated = prefs.getString("last_updated", null)
         showHome()
         if (prefs.getString("football_token", null).isNullOrBlank()) showTokenDialog() else refreshMatches()
+        refreshHandler.postDelayed(autoRefreshRunnable, 5 * 60 * 1000L)
     }
 
     private fun baseLayout() = LinearLayout(this).apply {
@@ -298,5 +310,11 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         player?.release(); player = null
+    }
+
+    override fun onDestroy() {
+        refreshHandler.removeCallbacks(autoRefreshRunnable)
+        player?.release(); player = null
+        super.onDestroy()
     }
 }
