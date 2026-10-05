@@ -10,6 +10,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import android.text.InputType
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.media3.common.MediaItem
@@ -218,7 +219,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showTokenDialog() {
-        val input = EditText(this).apply { hint = "ألصق مفتاح X-Auth-Token هنا"; setSingleLine(true) }
+        val input = EditText(this).apply {
+            hint = "ألصق مفتاح X-Auth-Token هنا"
+            setSingleLine(true)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
         android.app.AlertDialog.Builder(this)
             .setTitle("ربط مصدر المباريات")
             .setMessage("أنشئ حساباً مجانياً في football-data.org ثم ألصق مفتاح API. سيُحفظ على هذا الجهاز فقط.")
@@ -255,6 +260,19 @@ class MainActivity : AppCompatActivity() {
                     prefs.edit { remove("football_token") }; matches = emptyList()
                     Toast.makeText(this, "تم حذف المفتاح", Toast.LENGTH_SHORT).show()
                     showHome()
+                }.show()
+        })
+        root.addView(actionButton("مسح البيانات المؤقتة") {
+            android.app.AlertDialog.Builder(this).setTitle("مسح البيانات المؤقتة")
+                .setMessage("سيتم حذف المباريات المخزنة محلياً فقط، ولن يتم حذف مفتاح API أو المفضلة.")
+                .setNegativeButton("إلغاء", null)
+                .setPositiveButton("مسح") { _, _ ->
+                    prefs.edit { remove("cached_matches"); remove("last_updated") }
+                    matches = emptyList()
+                    lastUpdated = null
+                    errorMessage = null
+                    Toast.makeText(this, "تم مسح البيانات المؤقتة", Toast.LENGTH_SHORT).show()
+                    showSettings()
                 }.show()
         })
         root.addView(actionButton("مسح جميع المفضلة") {
