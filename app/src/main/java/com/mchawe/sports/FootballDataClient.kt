@@ -11,7 +11,8 @@ import java.util.concurrent.Executors
 
 data class Match(
     val id: String, val home: String, val away: String, val time: String,
-    val state: String, val score: String, val competition: String, val venue: String, val sortKey: Long = 0L
+    val state: String, val score: String, val competition: String, val venue: String,
+    val crestHome: String = "", val crestAway: String = "", val sortKey: Long = 0L
 )
 
 object FootballDataClient {
@@ -67,13 +68,17 @@ object FootballDataClient {
                         val fullTime = item.optJSONObject("score")?.optJSONObject("fullTime")
                         val h = fullTime?.opt("home")?.toString()?.takeUnless { it == "null" } ?: "-"
                         val a = fullTime?.opt("away")?.toString()?.takeUnless { it == "null" } ?: "-"
+                        val homeTeam = item.optJSONObject("homeTeam")
+                        val awayTeam = item.optJSONObject("awayTeam")
                         matches.add(Match(
                             item.optLong("id").toString(),
-                            item.optJSONObject("homeTeam")?.optString("name") ?: "الفريق الأول",
-                            item.optJSONObject("awayTeam")?.optString("name") ?: "الفريق الثاني",
+                            homeTeam?.optString("name") ?: "الفريق الأول",
+                            awayTeam?.optString("name") ?: "الفريق الثاني",
                             kickoff, state, if (state == "قادمة") "لم تبدأ" else "$h - $a",
                             item.optJSONObject("competition")?.optString("name") ?: "غير محددة",
                             item.optString("venue").takeUnless { it.isBlank() || it == "null" } ?: "غير متوفر",
+                            homeTeam?.optString("crest").orEmpty(),
+                            awayTeam?.optString("crest").orEmpty(),
                             sortKey
                         ))
                     }
