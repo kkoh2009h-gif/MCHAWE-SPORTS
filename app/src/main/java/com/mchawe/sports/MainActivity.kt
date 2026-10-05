@@ -61,7 +61,7 @@ class MainActivity : AppCompatActivity() {
             array.put(org.json.JSONObject().apply {
                 put("id", match.id); put("home", match.home); put("away", match.away)
                 put("time", match.time); put("state", match.state); put("score", match.score)
-                put("competition", match.competition); put("venue", match.venue)
+                put("competition", match.competition); put("venue", match.venue); put("sortKey", match.sortKey)
             })
         }
         return array.toString()
@@ -74,7 +74,7 @@ class MainActivity : AppCompatActivity() {
                 val item = array.getJSONObject(index)
                 Match(item.optString("id"), item.optString("home"), item.optString("away"),
                     item.optString("time"), item.optString("state"), item.optString("score"),
-                    item.optString("competition"), item.optString("venue"))
+                    item.optString("competition"), item.optString("venue"), item.optLong("sortKey", 0L))
             }
         } catch (_: Exception) { emptyList() }
     }
